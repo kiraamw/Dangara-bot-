@@ -1,0 +1,117 @@
+name: Python Package using Conda
+
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Install dependencies
+      run: |
+        conda env update --file environment.yml --name base
+    - name: Lint with flake8
+      run: |
+        conda install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with pytest
+      run: |
+        conda install pytest
+        pytest
+
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ParseMode, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils import executor
+
+# 🟢 BOT TOKENI
+BOT_TOKEN = "7157037323:AAFcoLLrb94YcOKJCu-LKDeR5da6zTF12_0"
+
+# 🟢 GURUH ID (Bot shu guruhga xabar yuboradi)
+GROUP_ID = -1002422922629  # Guruhingiz ID
+
+# 🔹 Bot va dispatcher yaratish
+bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+dp = Dispatcher(bot)
+
+# 🔹 Logging sozlamalari
+logging.basicConfig(level=logging.INFO)
+
+# 📌 START menyusi uchun tugmalar
+start_buttons = ReplyKeyboardMarkup(resize_keyboard=True)
+start_buttons.add("📩 Murojaat qilish", "ℹ️ Qo‘llab-quvvatlash")
+
+# 📌 Kategoriyalar tugmalari
+category_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+category_keyboard.add("🚧 Yo‘llar", "💡 Elektr energiya", "💧 Suv ta’minoti")
+category_keyboard.add("🏢 Hokimiyat binosi", "📜 Boshqa masalalar")
+
+# ✅ /start komandasi
+@dp.message_handler(commands=["start"])
+async def start_cmd(message: types.Message):
+    await message.answer(
+        "👋 Assalomu alaykum! Siz Dang‘ara hokimiyatining rasmiy botidasiz.\n\n"
+        "ℹ️ Hokimiyatga murojaat qilish uchun \"📩 Murojaat qilish\" tugmasini bosing yoki "
+        "savolingizni yozib yuboring.", 
+        reply_markup=start_buttons
+    )
+
+# ✅ "📩 Murojaat qilish" tugmasi bosilganda
+@dp.message_handler(lambda message: message.text == "📩 Murojaat qilish")
+async def ask_question(message: types.Message):
+    await message.answer(
+        "📌 Iltimos, savolingiz tegishli bo‘limni tanlang yoki to‘g‘ridan-to‘g‘ri yozib yuboring.",
+        reply_markup=category_keyboard
+    )
+
+# ✅ Foydalanuvchi xabar yozsa, guruhga yuborish
+@dp.message_handler()
+async def forward_to_group(message: types.Message):
+    if message.chat.id != GROUP_ID:
+        # 📩 Hokimiyat guruhiga xabar yuborish
+        await bot.send_message(
+            GROUP_ID, 
+            f"📩 <b>Yangi murojaat:</b>\n\n"
+            f"👤 <b>{message.from_user.full_name}</b>\n"
+            f"🆔 ID: <code>{message.from_user.id}</code>\n\n"
+            f"✉️ {message.text}"
+        )
+        # ✅ Foydalanuvchiga tasdiqlash xabari
+        await message.answer("✅ Xabaringiz hokimiyat guruhiga yuborildi! Tez orada javob olasiz.")
+
+# ✅ Guruhdan foydalanuvchiga javob yuborish
+@dp.message_handler(lambda message: message.chat.id == GROUP_ID, content_types=types.ContentType.TEXT)
+async def reply_to_user_from_group(message: types.Message):
+    try:
+        # ✅ Javob formati: "/javob USER_ID Matn"
+        parts = message.text.split(maxsplit=2)
+        if len(parts) < 3:
+            await message.answer("❌ Noto‘g‘ri format! To‘g‘ri foydalanish: /javob USER_ID Xabar")
+            return
+
+        command, user_id, text = parts
+        user_id = int(user_id)
+
+        # 📩 Foydalanuvchiga javob yuborish
+        await bot.send_message(user_id, f"📩 <b>Hokimiyat javobi:</b>\n{text}")
+        await message.answer("✅ Javob foydalanuvchiga yuborildi!")
+    except Exception as e:
+        await message.answer(f"❌ Xatolik: {e}")
+
+# 🔥 BOTNI ISHGA TUSHIRISH
+if name == "main":
+    executor.start_polling(dp, skip_updates=True)
