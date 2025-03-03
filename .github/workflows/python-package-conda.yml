@@ -39,10 +39,10 @@ from aiogram.types import ParseMode, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils import executor
 
 # 🟢 BOT TOKENI
-BOT_TOKEN = "7157037323:AAFcoLLrb94YcOKJCu-LKDeR5da6zTF12_0"
+BOT_TOKEN = :"your_bot_token"
 
 # 🟢 GURUH ID (Bot shu guruhga xabar yuboradi)
-GROUP_ID = -1002422922629  # Guruhingiz ID
+GROUP_ID = "your_id"  # Guruhingiz ID
 
 # 🔹 Bot va dispatcher yaratish
 bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
